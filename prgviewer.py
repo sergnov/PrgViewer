@@ -12,7 +12,7 @@ class commands:
         self.root = root
         
     def descOpen(self):
-        pass
+        self.op = askopenfilename()
         
     def descAbout(self):
         showinfo(title="About",message="PRG File Viewer version 0.0.1")
