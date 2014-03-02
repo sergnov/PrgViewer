@@ -7,6 +7,7 @@ class prg(object):
     def __init__(self,path):
         self.program = None
         self.progdigit = None
+        self.progscreen = None
         self.title = None
         self.path2prg = path
     
@@ -22,7 +23,30 @@ class prg(object):
                     self.progdigit.append(digit)
                 except ValueError:
                     print("Line is corrupted")
-            
+    
+    def screen(self, screenSize, mashtab, program):
+        '''Вычисляет экранные координаты для заданного экрана'''
+        def minmax(list):
+            sX,sY,mX,mY = 0,0,0,0
+            for c in list:
+                c[0] = float(c[0])
+                c[1] = float(c[1])
+                if c[0]<sX: sX = c[0]
+                elif c[0]>mX: mX = c[0]
+                
+                if c[1]<sY: sY = c[1]
+                elif c[1]>mY: mY = c[1]
+            return sX,sY,mX,mY
+        x,y=0,1
+        if program == None:
+            program = self.progdigit
+        sX,sY,mX,mY = minmax(program)
+        self.progscreen = list()
+        for c in program:
+            screenX = (c[x]+abs(0-sX))*mashtab[x]
+            screenY = (c[y]+abs(0-sY))*mashtab[y]
+            self.progscreen.append([screenX,screenY])
+        
     def download(self):
         try:
             reader = csvreader(open(self.path2prg, 'r'), delimiter="\t", skipinitialspace=True)
@@ -81,9 +105,17 @@ if __name__ == "__main__":
             print(c)
     else:
         print("Nothing")
+    m = [10.00,10.00]
+    p1.screen([500,500],m,None)
+    print()
+    for c in p1.progscreen:
+        print(c)
     
     print("Test 2")
     p2=prg("djnfjkfvh")
     p2.download()
     p2.extract()
     print(p2.complete())
+    p2.screen([500,500],m,None)
+    for c in p2.progscreen:
+        print(c)
