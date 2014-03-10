@@ -10,16 +10,48 @@ class prg(object):
         self.progscreen = None
         self.title = None
         self.path2prg = path
+        self.format = None
     
+    def testversion(self):
+        """открыть файл на чтение и найти там строку ;FILE_FORMAT=1, ;FILE_FORMAT=2
+        если ни одна строка не будет найдена, проверить следующие три предположения
+        1. может быть файл пуст
+        2. в файле нет программы
+        3. файл содержит некорректный формат
+        """
+        try:
+            file = open(self.path2prg, 'r')
+            self.format = None
+            for line in file:
+                if ";FILE_FORMAT=1" in line:
+                    self.format = "v1"
+                elif ";FILE_FORMAT=2" in line:
+                    self.format = "v2"
+        except OSError as err:
+            print(err)
+        return self.format
+        
     def extract(self):
+        """Извлекает данные в список"""
         if self.program != None:
             self.progdigit = list()
+            #создаем выборку в зависимости от формата
+            if self.format == "v2":
+                extdigit = lambda line: line[-3:]
+                extother = lambda line: line[0:-3]
+            elif self.format == "v1":
+                extdigit = lambda line: line[2:5]
+                extother = lambda line: line[0:1]+line[5:]+line[1:5]
+            else:
+                print("Not program in memory or bad file format")
+                return
+            
             for line in self.program:
-                testdigit = line[-3:]
+                testdigit = extdigit(line)
                 try:
                     digit = list()
-                    digit = [ float(x) for x in testdigit]
-                    digit.append(line[0:-3])
+                    digit = [float(x) for x in testdigit]
+                    digit.append(extother(line))
                     self.progdigit.append(digit)
                 except ValueError:
                     print("Line is corrupted")
@@ -48,8 +80,18 @@ class prg(object):
             self.progscreen.append([screenX,screenY])
         
     def download(self):
+        """убирает зависимость от формата"""
+        if self.format == None:
+            self.format = self.testversion()
+        if self.format == "v1":
+            self._down(" ")
+        elif self.format == "v2":
+            self._down("\t")
+
+    def _down(self,indelimeter):
+        """скачивает данные в заданном формате"""
         try:
-            reader = csvreader(open(self.path2prg, 'r'), delimiter="\t", skipinitialspace=True)
+            reader = csvreader(open(self.path2prg, 'r'), delimiter=indelimeter, skipinitialspace=True)
             self.program = list()
             self.title = list()
             for row in reader:
@@ -57,8 +99,6 @@ class prg(object):
                 if (len(row)>=5):
                     line=row[0]
                     if (line[0]!=";"):
-                        # Command=ExtXY(row)
-                        # program.append(Command)
                         self.program.append(row)
                 #заголовок или комментарий
                 if len(row)>0 and ";" in row[0]:
@@ -67,7 +107,7 @@ class prg(object):
             print(err)
             self.program = None
             self.title = None
-    
+            
     def complete(self):
         '''проверяет состояние класса'''
         return self.program!=None and self.title!=None
