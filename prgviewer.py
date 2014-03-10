@@ -198,6 +198,7 @@ class App(object):
         '''
         сгенерировать список кнопок, удалить перед использованием
         '''
+        self.canvas.paint()
         #здесь мы создаем группу кнопок
         gr = list()
         for item in self.canvas.field.group:
@@ -212,7 +213,7 @@ class App(object):
             b = Button(self.inframe,text=g)
             b.pack()
             self.lstButton.append(b)
-        self.canvas.paint()
+        
     
     def configure(self):
         self.window.bind("<MouseWheel>",lambda event:self._wheel(event))
