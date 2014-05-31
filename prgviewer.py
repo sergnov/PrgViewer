@@ -79,9 +79,17 @@ class prgCanvas(object):
 
     def genfield(self):
         x,y,d=0,1,2
-        
-        self.canvas.delete("FIG")
-        self.canvas.delete("DESC")
+        #нужно научиться обрабатывать группу
+        if self.field.primitives != None:
+            #for c in self.field.primitives:
+                #self.canvas.delete(c)
+            self.canvas.delete("FIG")
+        if self.field.descriptions != None:
+            #for c in self.field.descriptions:
+                #self.canvas.delete(c)
+            self.canvas.delete("DESC")
+        #self.field.primitives = list()
+        #self.field.descriptions = list()
 
         for c in self.field.group:
             cx = (c[x]+self.sXY[x])*self.mashtab[x]+self.reper[x]
@@ -91,17 +99,23 @@ class prgCanvas(object):
                 _color1,_color2 = ["red","red"] if self.filter(c[d][2]) else ["black","black"]
             else:
                 _color1,_color2 = "black","black"
-            
+            #
+            #self.field.primitives.append(self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG"))
             self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG")
             if self.flagDescription:
+                #self.field.descriptions.append(self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC"))
                 self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC")
 
     def move(self,x,y):
         #в группы
         self.reper[0]+=x
         self.reper[1]+=y
-        self.canvas.move("FIG",x,y)
-        self.canvas.move("DESC",x,y)
+        if self.field.primitives != None:
+            for c in self.field.primitives:
+                self.canvas.move(c,x,y)
+        if (self.field.descriptions != None) and (self.flagDescription):
+            for c in self.field.descriptions:
+                self.canvas.move(c,x,y)
 
     def load(self):
         _p = prg(self.fileprogram)
@@ -259,9 +273,7 @@ class App(object):
         self.window.bind("<Key-Down>",lambda event:self.canvas.move(0,10))
         self.window.bind("<Key-Up>",lambda event:self.canvas.move(0,-10))
         self.window.bind("<Key-plus>",lambda event:self._changemashtab(event,1.1,1.1))
-        self.window.bind("p",lambda event:self._changemashtab(event,1.1,1.1))
         self.window.bind("<Key-minus>",lambda event:self._changemashtab(event,0.9,0.9))
-        self.window.bind("m",lambda event:self._changemashtab(event,0.9,0.9))
         self.trace_show = self.showDescriptions.trace_variable("w",lambda v,i,m:self._hideshowdescriptions(v))
 
     def startloop(self):
