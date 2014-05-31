@@ -15,7 +15,7 @@ from tkinter import Menu, Button, Scale, Radiobutton, Frame, Label
 from tkinter import Listbox, Scrollbar
 from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import showinfo
-from tkinter import END, VERTICAL, RIGHT, LEFT, BOTH, Y
+from tkinter import END, VERTICAL, RIGHT, LEFT, BOTH, Y, SINGLE
 
 from random import randint
 
@@ -143,17 +143,22 @@ class App(object):
         
         self.rightframe = Frame(self.window, bg="light grey",height=500, width=200)
         
-        #рамка для списка
+        #Список фильтров
         self.inframe = Frame(self.rightframe, bg="yellow")
-        # self.lstButton = None
         scrollbar = Scrollbar(self.inframe, orient=VERTICAL) #нужен для отображения длинных списков
-        self.lstFilter = Listbox(self.inframe, yscrollcommand=scrollbar.set, bg="grey") #синхронизируем
-        scrollbar.config(command=self.lstFilter.yview)
+        #синхронизируем
+        self.lstFilter = Listbox(self.inframe, yscrollcommand=scrollbar.set, bg="grey", selectmode=SINGLE) 
+        scrollbar.config(command=self.lstFilter.yview, takefocus=0)
+        scrollbar.unbind("<Key-Up>")
+        scrollbar.unbind("<Key-Down>")
+        scrollbar.unbind("<Key-Left>")
+        scrollbar.unbind("<Key-Right>")
         scrollbar.pack(side=RIGHT, fill=Y)
         #вносим первый элемент
         self.lstFilter.insert(END,"Nothing")
         ''''-------------------------------'''
         self.canvas = prgCanvas(self.window,500,500)
+        self.canvas.canvas.tk_focusFollowsMouse()
         self.canvas.configure(file=self.lst[self.currentfileindex])
         self.canvas.paint()
 
@@ -170,7 +175,7 @@ class App(object):
         self.listFilesText = StringVar()
         self.listFilesText.set("\n".join(self.lst))
         self.listfiles = Label(self.rightframe,text=self.listFilesText.get())
-        self.lmashtab = Label(self.rightframe, text=str(self.canvas.mashtab))
+
         self.helpText = Label(self.rightframe, text="Use mouse wheel to select file\n"+
             "Use left mouse button to load file\n"+
             "Use Up,Down,Right,Left buttons to move field\n"+
@@ -240,6 +245,8 @@ class App(object):
         '''
         сгенерировать список кнопок, удалить перед использованием
         '''
+        #устанавливаем фокус
+        self.canvas.canvas.focus_force()
         #рисуем
         self.canvas.paint()
         #здесь мы создаем группу
@@ -276,7 +283,6 @@ class App(object):
         self.rbDescShow.pack(side="top")
         self.info.pack(side="top")
         self.listfiles.pack(side="top")
-        self.lmashtab.pack(side="top")
         self.inframe.pack(side="top")
         self.lstFilter.pack(side=LEFT, fill=BOTH, expand=1)
         self.helpText.pack(side="bottom")
