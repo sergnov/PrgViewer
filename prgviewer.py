@@ -1,9 +1,6 @@
 #__encoding=utf-8
 #Программа для просмотра файлов prg в заданном каталоге
 #поддержка файлов формата prg v2, v1
-#27/03/2014  вместо кнопки Show/Hide флажки
-#TODO заменить кнопки на список
-#TODO кнопка для сброса фильтра
 
 from sys import argv as sys_argv
 from os import path as path2program
@@ -24,33 +21,26 @@ from random import randint
 
 from prgLibrary import prg
 
-class prgGroup(object):
-    '''
-    Этот класс хранит в себе информацию о группе и как ее обрабатывать
-    '''
-    def __init__(self):
-        self.group = None #исходные данные
-        self.primitives = None #группа примитивов
-        self.descriptions = None #группа описаний
-        self.form = "rectangle"
-        self.jakors = ["ALL"]
-        
-    
-
 class prgCanvas(object):
     def __init__(self,window,height,width):
         self.canvas = Canvas(window, bg="grey", height=height, width=width)
         self.canvas.pack(side="left")
         self.flagDescription = True
-        self.mashtab = [1.00,1.00]
-        self.reper = [0.00,0.00]
-        self.sXY = [0.00,0.00]
+        self.setdefault(mashtab=True,reper=True,normalization=True)
 
-        self.field = prgGroup() #данные, блоки групп, графические примитивы, точки, #графические примитивы, надписи
+        self.field = None #данные, блоки групп, графические примитивы, точки, #графические примитивы, надписи
         self.fileprogram = None #имя файла для загрузки
 
         self.filter = None #фильтр, по которому определяется выделенный фрагмент
 
+    def setdefault(self,mashtab=False,reper=False,normalization=False):
+        if mashtab:
+            self.mashtab = 1.00 #масштаб
+        if reper:
+            self.reper = [10.00,10.00] #смещение
+        if normalization:
+            self.normalization = [0.00,0.00] #коэффициент для нормализации координат
+        
     def configure(self,file=None,filter= None):
         if file!=None:
             self.fileprogram = file
@@ -60,23 +50,29 @@ class prgCanvas(object):
     def setMashtab(self):
         '''Эта функция устанавливает текущий масштаб, так чтобы вся плата была в зоне видимости'''
         def findcoord(field):
-            sX,sY,mX,mY = 0,0,0,0
+            mX,mY = field[0][0],field[0][1]
+            # sX,sY = field[0][0],field[0][1]
+            sX,sY = 0, 0
             for c in field:
                 if c[0]<sX: sX = c[0]
                 elif c[0]>mX: mX = c[0]
                 if c[1]<sY: sY = c[1]
                 elif c[1]>mY: mY = c[1]
             return [sX,sY,mX,mY]
-        sX,sY,mX,mY=findcoord(self.field.group)
-        self.sXY=[abs(0-sX),abs(0-sY)]
+        sX,sY,mX,mY=findcoord(self.field)
         lX = int(self.canvas["width"])
         lY = int(self.canvas["height"])
         lengthX = abs(mX-sX)
-        lengthY = abs(sY-mY)
-        cX = lX/lengthX
-        cY = lY/lengthY
+        lengthY = abs(mY-sY)
+        if lengthX>0 and lengthY>0:
+            cX = lX/lengthX
+            cY = lY/lengthY
+        else:
+            cX,cY=1.0,1.0
         print("MSH",cX,cY)
-        self.mashtab = [cX,cY]
+        
+        self.normalization = [abs(sX),abs(sY)]
+        self.mashtab = int(min(cX,cY)*0.9)
 
     def genfield(self):
         x,y,d=0,1,2
@@ -84,19 +80,21 @@ class prgCanvas(object):
         self.canvas.delete("FIG")
         self.canvas.delete("DESC")
 
-        for c in self.field.group:
-            cx = (c[x]+self.sXY[x])*self.mashtab[x]+self.reper[x]
-            cy = (c[y]+self.sXY[y])*self.mashtab[y]+self.reper[y]
-            # print(c[d][2])
+        for c in self.field:
+            cx = (c[x]+self.normalization[x])*self.mashtab+self.reper[x]
+            cy = (c[y]+self.normalization[y])*self.mashtab+self.reper[y]
+
             if self.filter!=None:
                 _color1,_color2 = ["red","red"] if self.filter(c[d][2]) else ["black","black"]
             else:
                 _color1,_color2 = "black","black"
             
+            # здесь может быть выбор фигуры
+            # здесь может быть угол поворота
             self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG")
             if self.flagDescription:
                 self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC")
-
+        
     def move(self,x,y):
         #в группы
         self.reper[0]+=x
@@ -108,8 +106,10 @@ class prgCanvas(object):
         _p = prg(self.fileprogram)
         _p.download()
         _p.extract()
-        #здесь можно разместить фильтрацию по группам, только фильтр(фильтры) нужно передавать через параметр
-        self.field.group = [x[1:4] for x in _p.progdigit if "25" in x[3]]
+        #вариант кода для загрузки информации о установке
+        self.field = [x[1:4] for x in _p.progdigit if "25" in x[3]]
+        #вариант кода для загрузки информации о дозировании:
+        # self.field.group = [x[1:4] for x in _p.progdigit if "107" in x[3]]
         print(self.field)
 
     def paint(self):
@@ -119,6 +119,8 @@ class prgCanvas(object):
             self.genfield()
         except ZeroDivisionError:
             print("Zero division")
+        except IndexError:
+            print("Index error")
 
 class App(object):
     def __init__(self):
@@ -168,7 +170,7 @@ class App(object):
         self.listFilesText = StringVar()
         self.listFilesText.set("\n".join(self.lst))
         self.listfiles = Label(self.rightframe,text=self.listFilesText.get())
-        self.lmashtab = Label(self.rightframe, text=":".join([str(x) for x in self.canvas.mashtab]))
+        self.lmashtab = Label(self.rightframe, text=str(self.canvas.mashtab))
         self.helpText = Label(self.rightframe, text="Use mouse wheel to select file\n"+
             "Use left mouse button to load file\n"+
             "Use Up,Down,Right,Left buttons to move field\n"+
@@ -212,7 +214,7 @@ class App(object):
         elif self.currentfileindex>len(self.lst)-1:
             self.currentfileindex = 0
 
-        self.canvas.reper = [0.00,0.00]
+        self.canvas.setdefault(reper=True)
         self.infoText.set("Current file: "+self.lst[self.currentfileindex])
         self.info.configure(text=self.infoText.get())
         self.canvas.configure(self.lst[self.currentfileindex])
@@ -223,10 +225,8 @@ class App(object):
         self.canvas.flagDescription = self.showDescriptions.get()
         self.canvas.genfield()
 
-    def _changemashtab(self,event,dmX,dmY):
-        x,y=0,1
-        self.canvas.mashtab[x]*=dmX
-        self.canvas.mashtab[y]*=dmY
+    def _changemashtab(self,event,dm):
+        self.canvas.mashtab*=dm
         self.canvas.genfield()
 
     def _selectGroup(self,name):
@@ -244,7 +244,7 @@ class App(object):
         self.canvas.paint()
         #здесь мы создаем группу
         gr = list()
-        for item in self.canvas.field.group:
+        for item in self.canvas.field:
             print(item[2][2])
             if not (item[2][2] in gr):#выделяем уникальные данные
                 gr.append(item[2][2])
@@ -261,10 +261,10 @@ class App(object):
         self.window.bind("<Key-Left>",lambda event:self.canvas.move(-10,0))
         self.window.bind("<Key-Down>",lambda event:self.canvas.move(0,10))
         self.window.bind("<Key-Up>",lambda event:self.canvas.move(0,-10))
-        self.window.bind("<Key-plus>",lambda event:self._changemashtab(event,1.1,1.1))
-        self.window.bind("p",lambda event:self._changemashtab(event,1.1,1.1))
-        self.window.bind("<Key-minus>",lambda event:self._changemashtab(event,0.9,0.9))
-        self.window.bind("m",lambda event:self._changemashtab(event,0.9,0.9))
+        self.window.bind("<Key-plus>",lambda event:self._changemashtab(event,1.1))
+        self.window.bind("p",lambda event:self._changemashtab(event,1.1))
+        self.window.bind("<Key-minus>",lambda event:self._changemashtab(event,0.9))
+        self.window.bind("m",lambda event:self._changemashtab(event,0.9))
         self.trace_show = self.showDescriptions.trace_variable("w",lambda v,i,m:self._hideshowdescriptions(v))
         self.lstFilter.bind("<<ListboxSelect>>", lambda event: self._selectGroup(self.lstFilter.get(self.lstFilter.curselection())))
         self.lstFilter.unbind("<Key-Up>")
