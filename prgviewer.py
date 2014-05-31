@@ -15,9 +15,10 @@ from tkinter import Tk
 from tkinter import Canvas
 from tkinter import Event, StringVar, IntVar, BooleanVar
 from tkinter import Menu, Button, Scale, Radiobutton, Frame, Label
+from tkinter import Listbox, Scrollbar
 from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import showinfo
-from tkinter import VERTICAL,LEFT
+from tkinter import END, VERTICAL, RIGHT, LEFT, BOTH, Y
 
 from random import randint
 
@@ -79,17 +80,9 @@ class prgCanvas(object):
 
     def genfield(self):
         x,y,d=0,1,2
-        #нужно научиться обрабатывать группу
-        if self.field.primitives != None:
-            #for c in self.field.primitives:
-                #self.canvas.delete(c)
-            self.canvas.delete("FIG")
-        if self.field.descriptions != None:
-            #for c in self.field.descriptions:
-                #self.canvas.delete(c)
-            self.canvas.delete("DESC")
-        #self.field.primitives = list()
-        #self.field.descriptions = list()
+        
+        self.canvas.delete("FIG")
+        self.canvas.delete("DESC")
 
         for c in self.field.group:
             cx = (c[x]+self.sXY[x])*self.mashtab[x]+self.reper[x]
@@ -99,23 +92,17 @@ class prgCanvas(object):
                 _color1,_color2 = ["red","red"] if self.filter(c[d][2]) else ["black","black"]
             else:
                 _color1,_color2 = "black","black"
-            #
-            #self.field.primitives.append(self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG"))
+            
             self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG")
             if self.flagDescription:
-                #self.field.descriptions.append(self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC"))
                 self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC")
 
     def move(self,x,y):
         #в группы
         self.reper[0]+=x
         self.reper[1]+=y
-        if self.field.primitives != None:
-            for c in self.field.primitives:
-                self.canvas.move(c,x,y)
-        if (self.field.descriptions != None) and (self.flagDescription):
-            for c in self.field.descriptions:
-                self.canvas.move(c,x,y)
+        self.canvas.move("FIG",x,y)
+        self.canvas.move("DESC",x,y)
 
     def load(self):
         _p = prg(self.fileprogram)
@@ -153,8 +140,16 @@ class App(object):
         self.window.iconbitmap('\\'.join(_lst[:-1])+'\\PRGViewer-logo.ico')
         
         self.rightframe = Frame(self.window, bg="light grey",height=500, width=200)
+        
+        #рамка для списка
         self.inframe = Frame(self.rightframe, bg="yellow")
-        self.lstButton = None
+        # self.lstButton = None
+        scrollbar = Scrollbar(self.inframe, orient=VERTICAL) #нужен для отображения длинных списков
+        self.lstFilter = Listbox(self.inframe, yscrollcommand=scrollbar.set, bg="grey") #синхронизируем
+        scrollbar.config(command=self.lstFilter.yview)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        #вносим первый элемент
+        self.lstFilter.insert(END,"Nothing")
         ''''-------------------------------'''
         self.canvas = prgCanvas(self.window,500,500)
         self.canvas.configure(file=self.lst[self.currentfileindex])
@@ -247,23 +242,17 @@ class App(object):
         '''
         #рисуем
         self.canvas.paint()
-        #здесь мы создаем группу кнопок
+        #здесь мы создаем группу
         gr = list()
         for item in self.canvas.field.group:
             print(item[2][2])
             if not (item[2][2] in gr):#выделяем уникальные данные
                 gr.append(item[2][2])
-        if self.lstButton!=None:
-            for item in self.lstButton:
-                item.destroy()
-        self.lstButton = list()
-
-        fabric = lambda func,par: lambda: func(par)
-        for g in gr:
-            b = Button(self.inframe,text=g, command = fabric(self._selectGroup,g))
-            b.pack()
-            self.lstButton.append(b)
-
+        
+        self.lstFilter.delete(1,END)
+        
+        for item in gr:
+            self.lstFilter.insert(END,item)
 
     def configure(self):
         self.window.bind("<MouseWheel>",lambda event:self._wheel(event))
@@ -273,8 +262,13 @@ class App(object):
         self.window.bind("<Key-Down>",lambda event:self.canvas.move(0,10))
         self.window.bind("<Key-Up>",lambda event:self.canvas.move(0,-10))
         self.window.bind("<Key-plus>",lambda event:self._changemashtab(event,1.1,1.1))
+        self.window.bind("p",lambda event:self._changemashtab(event,1.1,1.1))
         self.window.bind("<Key-minus>",lambda event:self._changemashtab(event,0.9,0.9))
+        self.window.bind("m",lambda event:self._changemashtab(event,0.9,0.9))
         self.trace_show = self.showDescriptions.trace_variable("w",lambda v,i,m:self._hideshowdescriptions(v))
+        self.lstFilter.bind("<<ListboxSelect>>", lambda event: self._selectGroup(self.lstFilter.get(self.lstFilter.curselection())))
+        self.lstFilter.unbind("<Key-Up>")
+        self.lstFilter.unbind("<Key-Down>")
 
     def startloop(self):
         self.rightframe.pack(side="right",expand="y",fill="y")
@@ -284,6 +278,7 @@ class App(object):
         self.listfiles.pack(side="top")
         self.lmashtab.pack(side="top")
         self.inframe.pack(side="top")
+        self.lstFilter.pack(side=LEFT, fill=BOTH, expand=1)
         self.helpText.pack(side="bottom")
         self.window.mainloop()
 
