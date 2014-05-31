@@ -21,13 +21,20 @@ class prg(object):
         3. файл содержит некорректный формат
         """
         try:
-            file = open(self.path2prg, 'r')
             self.format = None
+            file = open(self.path2prg, 'r')
             for line in file:
                 if ";FILE_FORMAT=1" in line:
                     self.format = "v1"
                 elif ";FILE_FORMAT=2" in line:
                     self.format = "v2"
+            file.close()
+            if self.format==None: #возможно, это prg v1 без заголовка
+                reader = csvreader(open(self.path2prg, 'r'), delimiter=" ", skipinitialspace=True)
+                row = reader.__next__()
+                if (len(row)>=5):
+                    print("prg v1?")
+                    self.format="v1"
         except OSError as err:
             print(err)
         return self.format
@@ -55,6 +62,13 @@ class prg(object):
                     digit.append(extother(line))
                     self.progdigit.append(digit)
                 except ValueError:
+                    # try:
+                        # digit = list()
+                        # digit = [float(x) for x in testdigit]
+                        # digit.append(extother(line))
+                        # self.progdigit.append(digit)
+                    # except ValueError:
+                        # pass
                     print("Line is corrupted")
     
     def screen(self, screenSize, mashtab, program):
@@ -88,6 +102,7 @@ class prg(object):
             self._down(" ")
         elif self.format == "v2":
             self._down("\t")
+        # print(self.format)
 
     def _down(self,indelimeter):
         """скачивает данные в заданном формате"""
@@ -108,6 +123,7 @@ class prg(object):
             print(err)
             self.program = None
             self.title = None
+            
             
     def complete(self):
         '''проверяет состояние класса'''
