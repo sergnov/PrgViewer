@@ -5,7 +5,7 @@ base = None
 if sys.platform == "win32":    
     base = "Win32GUI" 
 
-includeFiles = ['PRGViewer-logo.ico','1.prg','Readme-Ru.pdf']
+includeFiles = ['PRGViewer-logo.ico','1.prg','Readme-Ru.pdf','msvcr100.dll']
 
 build_exe_options = {    
     "base": base,    
@@ -24,8 +24,8 @@ WIN_Target = cxExecutable(script = "PRGViewer.py",
     appendScriptToExe = True,
     icon = "PRGViewer-logo.ico")
     
-setup(  name = "PRGViewer",        
-    version = "2.3.5",
-    description = "PRGViewer by Novicov 2.3.5",
+setup(name = "PRGViewer",        
+    version = "2.4.1",
+    description = "PRGViewer by Novicov 2.4.1",
     options = {"build_exe": build_exe_options},        
     executables = [WIN_Target])

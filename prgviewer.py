@@ -128,7 +128,7 @@ class prgCanvas(Frame):
                 pattern = [[-3,-5.0],[3,-5.0],[0.0,3.0],[-3.0,-5.0]]
                 et = [[cx+item[0],cy+item[1]] for item in pattern]
                 new = self.transform(cx,cy,angle,et)
-                self.canvas.create_polygon(new,activefill=_color1,fill=_color2,tag=("FIG",tag))
+                self.canvas.create_polygon(new,activefill="white",fill=_color2,tag=("FIG",tag))
             else:
                 self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag=("FIG",tag))
         self.canvas.tag_lower("RED")
