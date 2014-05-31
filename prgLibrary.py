@@ -11,7 +11,6 @@ class prg(object):
         self.title = None
         self.path2prg = path
         self.format = None
-        self.group = None
     
     def testversion(self):
         """открыть файл на чтение и найти там строку ;FILE_FORMAT=1, ;FILE_FORMAT=2
@@ -128,12 +127,6 @@ class prg(object):
                 print(c)
         else:
             print("Title is empty")
-            
-    def getgroup(filter):
-        self.group = list()
-        for item in filter(self.progdigit):
-                if not (item[2][2] in self.group):#выделяем уникальные данные
-                    self.group.append(item[2][2])
         
 
 if __name__ == "__main__":
