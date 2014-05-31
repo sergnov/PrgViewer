@@ -25,7 +25,7 @@ WIN_Target = cxExecutable(script = "PRGViewer.py",
     icon = "PRGViewer-logo.ico")
     
 setup(  name = "PRGViewer",        
-    version = "2.2.2",
-    description = "PRGViewer by Novicov 2.2.2",
+    version = "2.3.0",
+    description = "PRGViewer by Novicov 2.3.0",
     options = {"build_exe": build_exe_options},        
     executables = [WIN_Target])
