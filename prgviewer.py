@@ -107,7 +107,7 @@ class prgCanvas(object):
         _p.download()
         _p.extract()
         #вариант кода для загрузки информации о установке
-        self.field = [x[1:4] for x in _p.progdigit if "25" in x[3]]
+        self.field = [x[1:4] for x in _p.progdigit if ("25" in x[3]) or ("107" in x[3])]
         #вариант кода для загрузки информации о дозировании:
         # self.field.group = [x[1:4] for x in _p.progdigit if "107" in x[3]]
         print(self.field)
