@@ -7,27 +7,29 @@ from os import path as path2program
 from os import listdir
 from os import _exit
 from os import chdir
+from random import randint
 
 from tkinter import Tk
 from tkinter import Canvas
 from tkinter import Event, StringVar, IntVar, BooleanVar
 from tkinter import Menu, Button, Scale, Radiobutton, Frame, Label
 from tkinter import Listbox, Scrollbar
+from tkinter import END, VERTICAL, BOTH, X, Y, SINGLE, DISABLED, NORMAL
+from tkinter import TOP, BOTTOM, RIGHT, LEFT
+
 from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import showinfo
-from tkinter import END, VERTICAL, RIGHT, LEFT, BOTH, Y, SINGLE
-
-from random import randint
 
 from prgLibrary import prg
+from prgWidgets import PRGListBox
 
-class prgCanvas(object):
-    def __init__(self,window,height,width):
-        self.canvas = Canvas(window, bg="grey", height=height, width=width)
-        self.canvas.pack(side="left")
-        self.flagDescription = True
+class prgCanvas(Frame):
+    def __init__(self,window=None,height=500,width=500,bg="grey"):
+        Frame.__init__(self,window,height=height,width=width,bg=bg)
+        self.canvas = Canvas(self, bg=bg, height=height, width=width)
+        self.flagDescription = False
         self.setdefault(mashtab=True,reper=True,normalization=True)
-
+        self.canvas.pack(expand='y',fill="both")
         self.field = None #данные, блоки групп, графические примитивы, точки, #графические примитивы, надписи
         self.fileprogram = None #имя файла для загрузки
 
@@ -44,8 +46,7 @@ class prgCanvas(object):
     def configure(self,file=None,filter= None):
         if file!=None:
             self.fileprogram = file
-        if filter!=None:
-            self.filter=filter
+        self.filter=filter
 
     def setMashtab(self):
         '''Эта функция устанавливает текущий масштаб, так чтобы вся плата была в зоне видимости'''
@@ -77,23 +78,45 @@ class prgCanvas(object):
     def genfield(self):
         x,y,d=0,1,2
         
-        self.canvas.delete("FIG")
-        self.canvas.delete("DESC")
+        self.canvas.delete("all")
 
         for c in self.field:
             cx = (c[x]+self.normalization[x])*self.mashtab+self.reper[x]
             cy = (c[y]+self.normalization[y])*self.mashtab+self.reper[y]
 
-            if self.filter!=None:
-                _color1,_color2 = ["red","red"] if self.filter(c[d][2]) else ["black","black"]
-            else:
-                _color1,_color2 = "black","black"
+            print("filter",self.filter)
             
+            if self.flagDescription and self.filter==None:
+                tag = "BLACK"
+                _color1,_color2 = "black","black"
+                font = "Verdana 8"
+                self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font=font,tag=("DESC",tag))
+            elif (not self.flagDescription) and self.filter==None:
+                tag = "BLACK"
+                _color1,_color2 = "black","black"
+            elif self.flagDescription and self.filter!=None and self.filter(c[d][2]):
+                _color1,_color2 = ["red","red"]
+                tag = "RED"
+                font = "Verdana 10 bold"
+                self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font=font,tag=("DESC",tag))
+            elif self.flagDescription:
+                _color1,_color2 = "black","black"
+                tag = "BLACK"
+                # font = "Verdana 8"
+                # self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font=font,tag=("DESC",tag))
+                pass
+                
             # здесь может быть выбор фигуры
             # здесь может быть угол поворота
-            self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG")
-            if self.flagDescription:
-                self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC")
+            # n = list()
+            # n.append(self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG"))
+            # if self.flagDescription and (self.filter!=None):
+                # n.append(self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC"))
+            # for item in n:
+                # print("ADD TAG",item)
+                # self.canvas.addtag_above("RED",item)n = list()
+            self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag=("FIG",tag))
+        self.canvas.tag_lower("RED")
         
     def move(self,x,y):
         #в группы
@@ -110,7 +133,7 @@ class prgCanvas(object):
         self.field = [x[1:4] for x in _p.progdigit if ("25" in x[3]) or ("107" in x[3])]
         #вариант кода для загрузки информации о дозировании:
         # self.field.group = [x[1:4] for x in _p.progdigit if "107" in x[3]]
-        print(self.field)
+        # print(self.field)
 
     def paint(self):
         self.load()
@@ -121,7 +144,13 @@ class prgCanvas(object):
             print("Zero division")
         except IndexError:
             print("Index error")
+            #рисуем надпись
+            self.canvas.delete("all")
+            x,y = int(self.canvas["width"]),int(self.canvas["height"])
+            self.canvas.create_text(x//2,y//2,text="FILE IS CORRUPTED", font="Verdana 12 bold",fill="red",tag="del")
 
+        
+        
 class App(object):
     def __init__(self):
         #настройка окружения
@@ -135,52 +164,47 @@ class App(object):
         #настройка графики
         self.window = Tk()
         self.window.title("PRG Viewer by Novicov: "+self.pathtoapp)
-        self.window.minsize(width=510,height=510)
-        self.window.maxsize(width=800,height=800)
+        w = 850
+        h = 500
+        self.window.minsize(width=w-100,height=h-100)
+        self.window.maxsize(width=w,height=h)
         #иконка
         _lst = sys_argv[0].split('\\')
         self.window.iconbitmap('\\'.join(_lst[:-1])+'\\PRGViewer-logo.ico')
         
-        self.rightframe = Frame(self.window, bg="light grey",height=500, width=200)
+        #ПАНЕЛИ
+        # self.leftframe       = Frame(self.window,    bg="blue",  width=int(w*0.667),height=h)
+        self.leftframe       = Frame(self.window,    bg="grey",  width=int(w*0.667),height=h)
+        # self.bottomleftframe = Frame(self.leftframe, bg="red",   width=w//4,        height=int(h*0.2))
+        self.bottomleftframe = Frame(self.leftframe, bg="grey",   width=w//4,        height=int(h*0.2))
+        # self.rightframe      = Frame(self.window,    bg="yellow",width=int(w*0.333),height=h)
+        self.rightframe      = Frame(self.window,    bg="dark grey",width=int(w*0.333),height=h)
+        
+        #canvas
+        self.set_canvas(             self.leftframe, bg="dark green", width=int(w*0.667),height=int(h*0.8))
+        # self.set_canvas(             self.leftframe, bg="light green", width=100,height=100)
+        
+        #кнопки
+        self.nextButton = Button(self.bottomleftframe,text="Next",width=10)
+        self.prevButton = Button(self.bottomleftframe,text="Prev",width=10)
         
         #Список фильтров
-        self.inframe = Frame(self.rightframe, bg="yellow")
-        scrollbar = Scrollbar(self.inframe, orient=VERTICAL) #нужен для отображения длинных списков
-        #синхронизируем
-        self.lstFilter = Listbox(self.inframe, yscrollcommand=scrollbar.set, bg="grey", selectmode=SINGLE) 
-        scrollbar.config(command=self.lstFilter.yview, takefocus=0)
-        scrollbar.unbind("<Key-Up>")
-        scrollbar.unbind("<Key-Down>")
-        scrollbar.unbind("<Key-Left>")
-        scrollbar.unbind("<Key-Right>")
-        scrollbar.pack(side=RIGHT, fill=Y)
-        #вносим первый элемент
-        self.lstFilter.insert(END,"Nothing")
-        ''''-------------------------------'''
-        self.canvas = prgCanvas(self.window,500,500)
-        self.canvas.canvas.tk_focusFollowsMouse()
-        self.canvas.configure(file=self.lst[self.currentfileindex])
-        self.canvas.paint()
+        self.Filter = PRGListBox(self.rightframe,width=w-500)
 
-        self.showDescriptions = BooleanVar()
-        self.showDescriptions.set(1)
-        self.rbDescShow = Radiobutton(self.rightframe, text = "Hide description",width=20,
-                                      variable = self.showDescriptions, value = 0)
-        self.rbDescHide = Radiobutton(self.rightframe, text = "Show description",width=20,
-                                      variable = self.showDescriptions, value = 1)
-
+        #Выбор файла платы
         self.infoText = StringVar()
         self.infoText.set("Current file: "+self.lst[self.currentfileindex])
         self.info = Label(self.rightframe,text=self.infoText.get())
         self.listFilesText = StringVar()
-        self.listFilesText.set("\n".join(self.lst))
-        self.listfiles = Label(self.rightframe,text=self.listFilesText.get())
-
-        self.helpText = Label(self.rightframe, text="Use mouse wheel to select file\n"+
-            "Use left mouse button to load file\n"+
-            "Use Up,Down,Right,Left buttons to move field\n"+
-            "Use Show/Hide descriptions button\n"+
-            "Use +/- buttons to change scale of field",anchor="n",justify=LEFT)
+        self.listFilesText.set("\n".join(["Files:    "]+self.lst))
+        self.listfiles = Label(self.rightframe,text=self.listFilesText.get(),anchor="w",justify=LEFT)
+        
+        self.helpText = Label(self.rightframe, text="Use Next/Prev (Pg Down/Up) buttons for change file\n"+
+            "Use Up,Down,Right,Left buttons for move field\n"+
+            "Select row in ListBox for change vision mode\n"+
+            "Use +/- (p/m) buttons for scaling of field",anchor="n",justify=LEFT)
+            
+        
 
     def set_path_and_current(self, filename):
         '''
@@ -206,47 +230,23 @@ class App(object):
             self.infoText.set("Error")
             self.info.configure(text=self.infoText.get())
             
-
-    def _wheel(self,event):
-        """
-        реакция на прокрутку колеса мыши
-        меняем текущее имя файла
-        обнуляем начальные координаты загрузки и перерисовываем текущее имя файла
-        """
-        self.currentfileindex+=1 if abs(event.delta)==event.delta else -1
+    def set_canvas(self,master=None,height=500,width=500,bg="grey"  ):
+        if master==None:
+            master=self.window
+        self.canvas = prgCanvas(master,height=height,width=width,bg=bg)
+        
+        
+    def nextprev(self,direction):
+        self.currentfileindex+=1 if abs(direction)==direction else -1
+        
         if self.currentfileindex<0:
             self.currentfileindex = len(self.lst)-1
         elif self.currentfileindex>len(self.lst)-1:
             self.currentfileindex = 0
-
         self.canvas.setdefault(reper=True)
         self.infoText.set("Current file: "+self.lst[self.currentfileindex])
         self.info.configure(text=self.infoText.get())
-        self.canvas.configure(self.lst[self.currentfileindex])
-
-    def _hideshowdescriptions(self,event):
-        '''
-        '''
-        self.canvas.flagDescription = self.showDescriptions.get()
-        self.canvas.genfield()
-
-    def _changemashtab(self,event,dm):
-        self.canvas.mashtab*=dm
-        self.canvas.genfield()
-
-    def _selectGroup(self,name):
-        print("select"+name)
-        #устанавливаем фильтр
-        self.canvas.configure(filter=lambda x: x==name)
-        #перерисовываем
-        self.canvas.paint()
-
-    def _genAll(self):
-        '''
-        сгенерировать список кнопок, удалить перед использованием
-        '''
-        #устанавливаем фокус
-        self.canvas.canvas.focus_force()
+        self.canvas.configure(self.lst[self.currentfileindex]) 
         #рисуем
         self.canvas.paint()
         #здесь мы создаем группу
@@ -256,14 +256,37 @@ class App(object):
             if not (item[2][2] in gr):#выделяем уникальные данные
                 gr.append(item[2][2])
         
-        self.lstFilter.delete(1,END)
+        self.Filter.lst.delete(2,END)
         
         for item in gr:
-            self.lstFilter.insert(END,item)
+            self.Filter.lst.insert(END,item)
 
-    def configure(self):
-        self.window.bind("<MouseWheel>",lambda event:self._wheel(event))
-        self.canvas.canvas.bind("<Button-1>",lambda event:self._genAll())
+    def _changemashtab(self,event,dm):
+        self.canvas.mashtab*=dm
+        self.canvas.genfield()
+
+        
+    def filter_selection(self):
+        name = self.Filter.lst.get(self.Filter.lst.curselection())
+        if name == "Hide All":
+            print("Hide All")
+            self.canvas.flagDescription = False
+            self.canvas.filter = None
+            self.canvas.genfield()
+        elif name =="Show All":
+            print("Show All")
+            self.canvas.flagDescription = True
+            self.canvas.filter = None
+            self.canvas.genfield()
+        else:
+            print("Other filter"+name)
+            self.canvas.flagDescription = True
+            #устанавливаем фильтр
+            self.canvas.configure(filter=lambda x: x==name)
+            #перерисовываем
+            self.canvas.paint()
+
+    def configure(self):            
         self.window.bind("<Key-Right>",lambda event:self.canvas.move(10,0))
         self.window.bind("<Key-Left>",lambda event:self.canvas.move(-10,0))
         self.window.bind("<Key-Down>",lambda event:self.canvas.move(0,10))
@@ -272,20 +295,37 @@ class App(object):
         self.window.bind("p",lambda event:self._changemashtab(event,1.1))
         self.window.bind("<Key-minus>",lambda event:self._changemashtab(event,0.9))
         self.window.bind("m",lambda event:self._changemashtab(event,0.9))
-        self.trace_show = self.showDescriptions.trace_variable("w",lambda v,i,m:self._hideshowdescriptions(v))
-        self.lstFilter.bind("<<ListboxSelect>>", lambda event: self._selectGroup(self.lstFilter.get(self.lstFilter.curselection())))
-        self.lstFilter.unbind("<Key-Up>")
-        self.lstFilter.unbind("<Key-Down>")
+        self.Filter.lst.bind("<<ListboxSelect>>", lambda event: self.filter_selection())
+        self.Filter.bind("<Leave>",lambda event: self.window.focus_force())
+        
+        self.nextButton.configure(command=lambda:self.nextprev(1))
+        self.prevButton.configure(command=lambda:self.nextprev(-1))
+        self.window.bind("<Key-Prior>",lambda event:self.nextprev(-1)) #Page Up
+        self.window.bind("<Key-Next>",lambda event:self.nextprev(1)) #Page Down
 
     def startloop(self):
-        self.rightframe.pack(side="right",expand="y",fill="y")
-        self.rbDescHide.pack(side="top")
-        self.rbDescShow.pack(side="top")
-        self.info.pack(side="top")
-        self.listfiles.pack(side="top")
-        self.inframe.pack(side="top")
-        self.lstFilter.pack(side=LEFT, fill=BOTH, expand=1)
-        self.helpText.pack(side="bottom")
+        self.leftframe.pack (side=LEFT,expand="y",fill="both")
+        # self.leftframe.pack ()
+        print("leftframe")
+        
+        self.canvas.pack         (expand="y",fill="both")
+        self.canvas.canvas.pack  ()
+        self.canvas.configure(file=self.lst[self.currentfileindex])
+        self.canvas.paint()
+        
+        self.bottomleftframe.pack()
+        self.nextButton.pack     (side=RIGHT)
+        self.prevButton.pack     (side=LEFT)
+        
+        self.rightframe.pack(side=RIGHT,expand="y",fill="y")
+        # self.rightframe.pack()
+        print("rightframe")
+        
+        self.info.pack      (side=TOP,fill=X,expand=Y)
+        self.listfiles.pack (side=TOP,fill=BOTH,expand=Y)
+        self.Filter.pack    (side=TOP, fill=BOTH, expand=Y)
+        self.helpText.pack  (side=BOTTOM)
+        
         self.window.mainloop()
 
 if __name__ == "__main__":
