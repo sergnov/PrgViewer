@@ -8,6 +8,7 @@ from os import listdir
 from os import _exit
 from os import chdir
 from random import randint
+from math import cos,sin,radians
 
 from tkinter import Tk
 from tkinter import Canvas
@@ -74,7 +75,20 @@ class prgCanvas(Frame):
         
         self.normalization = [abs(sX),abs(sY)]
         self.mashtab = int(min(cX,cY)*0.9)
-
+    
+    def transform(self,x,y,a,etalon):
+        """
+        точка отсчета - в центре эталона
+        """
+        new = list()
+        for item in etalon:
+            ca = cos(a)
+            sa = sin(a)
+            x2,y2 = item[0]-x, item[1]-y
+            
+            new.append([x2*ca + y2*sa+x, x2*sa - y2*ca+y])
+        return new
+        
     def genfield(self):
         x,y,d=0,1,2
         
@@ -108,14 +122,15 @@ class prgCanvas(Frame):
                 
             # здесь может быть выбор фигуры
             # здесь может быть угол поворота
-            # n = list()
-            # n.append(self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag="FIG"))
-            # if self.flagDescription and (self.filter!=None):
-                # n.append(self.canvas.create_text(cx,cy,anchor="nw",text=str(c[d][1]), fill=_color1,font="Verdana 8",tag="DESC"))
-            # for item in n:
-                # print("ADD TAG",item)
-                # self.canvas.addtag_above("RED",item)n = list()
-            self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag=("FIG",tag))
+            print("c",c)
+            if c[-2][0]=="25":
+                angle = radians(c[-1])
+                pattern = [[-3,-5.0],[3,-5.0],[0.0,3.0],[-3.0,-5.0]]
+                et = [[cx+item[0],cy+item[1]] for item in pattern]
+                new = self.transform(cx,cy,angle,et)
+                self.canvas.create_polygon(new,activefill=_color1,fill=_color2,tag=("FIG",tag))
+            else:
+                self.canvas.create_rectangle(cx-1,cy-1,cx+1,cy+1,outline=_color1,fill=_color2,tag=("FIG",tag))
         self.canvas.tag_lower("RED")
         
     def move(self,x,y):
@@ -130,7 +145,8 @@ class prgCanvas(Frame):
         _p.download()
         _p.extract()
         #вариант кода для загрузки информации о установке
-        self.field = [x[1:4] for x in _p.progdigit if ("25" in x[3]) or ("107" in x[3])]
+        self.field = [x[1:4]+[x[0]] for x in _p.progdigit if ("25" in x[3]) or ("107" in x[3])]
+        print(_p.progdigit)
         #вариант кода для загрузки информации о дозировании:
         # self.field.group = [x[1:4] for x in _p.progdigit if "107" in x[3]]
         # print(self.field)
@@ -225,7 +241,20 @@ class App(object):
             self.listfiles.configure(text=self.listFilesText.get())
             
             self.canvas.configure(self.lst[self.currentfileindex])
-            self._genAll()
+            self.canvas.setdefault(reper=True)
+            #рисуем
+            self.canvas.paint()
+            #здесь мы создаем группу
+            gr = list()
+            for item in self.canvas.field:
+                print(item[2][2])
+                if not (item[2][2] in gr):#выделяем уникальные данные
+                    gr.append(item[2][2])
+            
+            self.Filter.lst.delete(2,END)
+            
+            for item in gr:
+                self.Filter.lst.insert(END,item)
         except IOError:
             self.infoText.set("Error")
             self.info.configure(text=self.infoText.get())
